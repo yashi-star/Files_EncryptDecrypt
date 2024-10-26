@@ -81,7 +81,6 @@ def decrypt_aes(key, encrypted_data):
     except ValueError as e:
         print("Error during unpadding. Possible data corruption or wrong key.")
         raise e
-
     return decrypted_data
 
 # Function to encrypt audio file
@@ -91,8 +90,7 @@ def encrypt_audio():
     
     if file_path:  # Ensure the user didn't cancel the file dialog
         with open(file_path, 'rb') as file:
-            original_file = file.read()
-        
+            original_file = file.read()   
         encrypted = encrypt_aes(key, original_file)
         
         # Save the encryption key to a file for later use
@@ -133,6 +131,8 @@ def decrypt_audio():
         except ValueError:
             print("Error during decryption. Possible data corruption or wrong key.")
 
+
+
 def encrypt_image():
     key = generate_key()
     file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpeg;*.jpg;*.png")])
@@ -144,14 +144,13 @@ def encrypt_image():
         encrypted = encrypt_aes(key, original_file)
         
         with open("image_encryption_key.key", 'wb') as key_file:
-            key_file.write(key)
-        
-        save_path = filedialog.asksaveasfilename(filetypes=[("Encrypted Image Files", "*.jpeg;*.jpg;*.png")])
-        
+            key_file.write(key)        
+        save_path = filedialog.asksaveasfilename(filetypes=[("Encrypted Image Files", "*.jpeg;*.jpg;*.png")])        
         if save_path:
             with open(save_path, 'wb') as file:
                 file.write(encrypted)
                 print("Image encryption completed.")
+
 
 # Function to decrypt image file
 def decrypt_image():
@@ -161,13 +160,10 @@ def decrypt_image():
     except FileNotFoundError:
         print("Image encryption key file not found.")
         return
-
-    file_path = filedialog.askopenfilename(filetypes=[("Encrypted Image Files", "*.jpeg;*.jpg;*.png")])
-    
+    file_path = filedialog.askopenfilename(filetypes=[("Encrypted Image Files", "*.jpeg;*.jpg;*.png")])    
     if file_path:
         with open(file_path, 'rb') as file:
-            encrypted_file = file.read()
-        
+            encrypted_file = file.read()       
         try:
             decrypted = decrypt_aes(key, encrypted_file)
             save_path = filedialog.asksaveasfilename(filetypes=[("Image Files", "*.jpeg;*.jpg;*.png")])
@@ -284,23 +280,29 @@ def load_key():
     with open('key.key', 'rb') as key_file:
         return key_file.read().decode('utf-8')
 
+
 def encrypt_text():
     key = code.get()
     if key:
-        save_key(key)  # Save the key to a file
-        root1 = Toplevel(root)
-        root1.title("Encryption")
-        root1.geometry("400x200")
-        root1.configure(bg="#0c111b")
+        # Ensure the key length is appropriate for AES (16, 24, or 32 bytes)
+        key = key.ljust(32)[:32]  # Pad or truncate the key to 32 bytes
         message = text1.get(1.0, END).strip()
         if message:  # Check if there is a message to encrypt
-            encode_message = message.encode("ascii")
-            base64_bytes = base64.b64encode(encode_message)
-            encrypted = base64_bytes.decode("ascii")
+            # Convert the message to bytes
+            message_bytes = message.encode('utf-8')
+            
+            # Encrypt the message
+            encrypted_message = encrypt_aes(key.encode('utf-8'), message_bytes)
+            
+            # Display the encrypted message as bytes in hex format for readability
+            root1 = Toplevel(root)
+            root1.title("Encryption")
+            root1.geometry("400x200")
+            root1.configure(bg="#0c111b")
             Label(root1, text="ENCRYPT", font="arial", fg="white", bg="#0c111b").place(x=10, y=0)
             text2 = Text(root1, font="Rpbote 10", bg="white", relief=SUNKEN)
             text2.place(x=10, y=40, width=380, height=150)
-            text2.insert(END, encrypted)
+            text2.insert(END, encrypted_message.hex())  # Display encrypted message as hex
             print("Text encryption completed.")
             code.set("")  # Reset the key input field after encryption
         else:
@@ -309,35 +311,39 @@ def encrypt_text():
         messagebox.showerror("Encryption", "Input secret key")
 
 def decrypt_text():
-    # Load the key from the key.key file
-    with open("key.key", "r") as file:
-        loaded_key = file.read()
-
-    # Get the key from the input field
-    user_key = code.get()
-
-    # Compare the loaded key with the user's key
-    if user_key == loaded_key:
-        root2 = Toplevel(root)
-        root2.title("Decryption")
-        root2.geometry("400x200")
-        root2.configure(bg="#0c111b")
+    key = code.get()
+    if key:
+        # Ensure the key length is appropriate for AES (16, 24, or 32 bytes)
+        key = key.ljust(32)[:32]  # Pad or truncate the key to 32 bytes
+        
         message = text1.get(0.0, END).strip()
         if message:  # Check if there is a message to decrypt
             try:
-                base64_bytes = base64.b64decode(message)
-                decrypted = base64_bytes.decode("ascii")
+                # Convert the hex string back to bytes
+                encrypted_message = bytes.fromhex(message)
+                
+                # Decrypt the message
+                decrypted_message = decrypt_aes(key.encode('utf-8'), encrypted_message)
+                
+                root2 = Toplevel(root)
+                root2.title("Decryption")
+                root2.geometry("400x200")
+                root2.configure(bg="#0c111b")
                 Label(root2, text="DECRYPT", font="arial", fg="white", bg="#0c111b").place(x=10, y=0)
                 text2 = Text(root2, font="Rpbote 10", bg="white", relief=SUNKEN)
                 text2.place(x=10, y=40, width=380, height=150)
-                text2.insert(END, decrypted)
+                text2.insert(END, decrypted_message.decode('utf-8'))  # Show decrypted message
                 print("Text decryption completed.")
             except Exception as e:
                 messagebox.showerror("Decryption Error", "Failed to decrypt the message.")
         else:
             messagebox.showerror("Decryption", "Input text to decrypt")
     else:
-        messagebox.showerror("Decryption Error", "Wrong key. Please enter the correct key.")
+        messagebox.showerror("Decryption Error", "Input secret key")
+
+
+
+        
     
 def show_about():
     messagebox.showinfo("About", "This is a sample application.\n\nVersion: 1.0\n By-Yashi Pant")
