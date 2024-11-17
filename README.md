@@ -1,7 +1,6 @@
 # File Encryption and Decryption Application
 
 This Python-based application allows you to secure your files through encryption and decryption. It supports various file types, including audio, images, PDFs, videos  and text encryption decryption using AES.
-
 -
 
 ## Table of Contents
